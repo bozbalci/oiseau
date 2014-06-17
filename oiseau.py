@@ -47,8 +47,7 @@ DEBUG        = False
 
 from mpd import MPDClient, MPDError, CommandError
 import pylast
-from select import select
-import threading, time, logging, sys
+import time, logging, sys
 
 class Event(list):
    """ Event subscription system (http://stackoverflow.com/a/2022629/1767963) """
@@ -165,22 +164,21 @@ class MPDWatcher:
       
       self.conn.client.send_idle('player')
       while self.watching:
-         can_read = select([self.conn.client], [], [], 0)[0]
-         if can_read:
-            self.conn.client.fetch_idle()
+         self.conn.client.fetch_idle()
+         status = self.conn.client.status()
+         songid = status.get('songid', None)
+         last_songid = last_status.get('songid', None)
+         track_changed = songid not in (None, last_songid)
 
-            status = self.conn.client.status()
-            songid = status.get('songid', None)
-            last_songid = last_status.get('songid', None)
-            track_changed = songid not in (None, last_songid)
+         if track_changed:
+            song = self.current_song()
+            self.process_song(song)
+         
+         last_status = status
 
-            if track_changed:
-               song = self.current_song()
-               self.process_song(song)
-            
-            last_status = status
-            # Continue idling.
-            self.conn.client.send_idle()
+         # Continue idling, and sleep for a while.
+         time.sleep(1)
+         self.conn.client.send_idle('player')
 
    def process_song(self, song):
       """ If a song is worthy of being scrobbled, add it to the queue. """
@@ -207,10 +205,10 @@ class MPDWatcher:
       self.queue.append(payload)
       self.on_update()
 
-   def strip(self):
-      """ Strips empty song entries from the list. """
+   def stop(self):
+      """ Stop watching the MPD server """
 
-      self.queue = [k for k in self.queue if k != {}]
+      self.watching = False
 
 class Scrobbler:
    """ Submits tracks to Last.fm """
@@ -244,8 +242,6 @@ def main():
 
    logging.info("Initializing MPD watcher ...")
    watcher = MPDWatcher(client)
-   t = threading.Thread(target=watcher.watch)
-   t.start()
    logging.debug("Initialized.")
 
    logging.info("Initializing scrobbler ...")
@@ -279,6 +275,13 @@ def main():
    
    logging.info("Watching for MPD tracks.")
    watcher.on_update.append(watcher_process)
+
+   try:
+      watcher.watch()
+   except (KeyboardInterrupt, EOFError):
+      watcher.stop()
+      client.disconnect()
+      sys.exit(0)
 
 if __name__ == '__main__':
    if DEBUG:
