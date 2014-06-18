@@ -10,13 +10,13 @@ Pros:
 
 Cons:
 
-- Scrobbles a track immediately after the song starts.
+- Scrobbles a track immediately after the song starts. (TODO: Fix this)
 - Doesn't have arguments/configs/documents/help etc, you have to modify the source code.
-- Doesn't support the album artist tag (who cares)
-- Doesn't cache tracks for later scrobbling
+- Doesn't cache tracks for later scrobbling (TODO: Fix this)
 
 TODO:
 
+- Wait until the half of the song before scrobbling it to Last.fm
 - Cache tracks for later scrobbling
 
 Usage
@@ -46,6 +46,7 @@ Requirements
 ------------
 
 - Tested on Python 2.7.6
+- Requires MPD >= 0.15, tested on MPD 0.18.11
 - [python-mpd2][py27-mpd2] >= 0.5.3
 - [pylast][pylast] >= 0.5.11
 
