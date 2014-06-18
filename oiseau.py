@@ -31,8 +31,6 @@
 # Configuration
 # -------------------------
 
-API_KEY      = "Your API key"
-API_SECRET   = "Your API secret"
 LFM_USERNAME = "Your Last.fm username"
 LFM_PASSWORD = "Your Last.fm password"
 MPD_HOST     = "localhost"
@@ -44,6 +42,9 @@ DEBUG        = False
 # -------------------------
 # Here be dragons ...
 # -------------------------
+
+API_KEY      = "a76e4f3f6a9e81f45a943509437a125f"
+API_SECRET   = '480a8292392dbba520848a3a955e2ec4'
 
 from mpd import MPDClient, MPDError, CommandError
 import pylast

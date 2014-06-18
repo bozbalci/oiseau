@@ -28,8 +28,6 @@ Open `oiseau.py` and edit the following lines:
     # Configuration
     # -------------------------
     
-    API_KEY      = "Your API key"
-    API_SECRET   = "Your API secret"
     LFM_USERNAME = "Your Last.fm username"
     LFM_PASSWORD = "Your Last.fm password"
     MPD_HOST     = "MPD hostname"
