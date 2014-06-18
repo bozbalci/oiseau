@@ -246,7 +246,10 @@ def main():
    logging.debug("Initialized.")
 
    logging.info("Initializing scrobbler ...")
-   scrobbler = Scrobbler(LFM_USERNAME, LFM_PASSWORD)
+   try:
+      scrobbler = Scrobbler(LFM_USERNAME, LFM_PASSWORD)
+   except Exception as e:
+      raise OiseauError("Couldn't connect to Last.fm: %s" % e)
    logging.debug("Initialized.")
 
    def watcher_process():
