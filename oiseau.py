@@ -363,7 +363,7 @@ def main():
          except:
             album_artist = None
          try:
-            duration = int(last_played['duration'])
+            duration = int(last_played['time'])
          except:
             duration = None
 
