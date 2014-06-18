@@ -158,10 +158,11 @@ class MPDWatcher:
       # Will be useful when we are recording status changes
       last_status = self.conn.client.status()
 
-      # If there's already a track playing, then add it to the scrobbling queue
+      # If there's already a track __playing__, then add it to the scrobbling queue
       if last_status.get('songid', None) != None:
-         song = self.current_song()
-         self.process_song(song)
+         if last_status['state'] == 'play':
+               song = self.current_song()
+               self.process_song(song)
       
       self.conn.client.send_idle('player')
       while self.watching:
@@ -184,24 +185,41 @@ class MPDWatcher:
    def process_song(self, song):
       """ If a song is worthy of being scrobbled, add it to the queue. """
 
+      # Not a song, really.
       if song == {}:
          return
 
       try:
          artist = song['artist']
-         album = song['album']
          title = song['title']
       except:
          # Song doesn't have enough information to be scrobbled to Last.fm
          return
-     
+      
       # Put in a dictionary format that pylast accepts.
       payload = {
          'artist' : artist,
-         'album': album,
          'title': title,
          'timestamp': int(time.time())
       }
+
+      # The following are not mandatory, but still nice to be known by Last.fm
+      try:
+         payload['album'] = song['album']
+      except:
+         pass
+      try:
+         payload['album_artist'] = song['albumartist']
+      except:
+         pass
+      try:
+         payload['track_number'] = song['track']
+      except:
+         pass
+      try:
+         payload['duration'] = int(song['time'])
+      except:
+         pass
 
       self.queue.append(payload)
       self.on_update()
@@ -258,13 +276,31 @@ def main():
          
          try:
             artist = last_played['artist']
-            album = last_played['album']
             title = last_played['title']
          except:
             # "Now playing" not worthy of being updated.
             pass
 
-         scrobbler.now_playing(artist=artist, album=album, title=title)
+         # The following are not mandatory, but still nice to be known by Last.fm
+         try:
+            album = last_played['album']
+         except:
+            album = None
+         try:
+            album_artist = last_played['albumartist']
+         except:
+            album_artist = None
+         try:
+            duration = int(last_played['duration'])
+         except:
+            duration = None
+         try:
+            track_number = last_played['track']
+         except:
+            track_number = None
+
+         scrobbler.now_playing(artist=artist, album=album, title=title,
+               album_artist=album_artist, duration=duration, track_number=track_number)
          logging.info("Submitted 'now_playing' to Last.fm")
       
       try:
