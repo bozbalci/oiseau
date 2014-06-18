@@ -127,8 +127,10 @@ class MPDWatcher:
 
    def __init__(self, conn):
       self.conn = conn
+      self.now_playing = None
       self.queue = []
-      self.on_update = Event()
+      self.on_queue_update = Event()
+      self.on_now_playing_update = Event()
    
    def current_song(self):
       """ Return the current playing song on MPD, empty dictionary if none playing """
@@ -158,11 +160,17 @@ class MPDWatcher:
       # Will be useful when we are recording status changes
       last_status = self.conn.client.status()
 
-      # If there's already a track __playing__, then add it to the scrobbling queue
-      if last_status.get('songid', None) != None:
-         if last_status['state'] == 'play':
-               song = self.current_song()
-               self.process_song(song)
+      # Removed feature: the track playing at the time oiseau starts no longer gets
+      # added to the scrobbling queue. If you loved it more than I did, uncomment ...
+      # ... and hack it so it actually works.
+      # # If there's already a track __playing__, then add it to the scrobbling queue
+      # if last_status.get('songid', None) != None:
+      #    if last_status['state'] == 'play':
+      #          logging.debug("Already got a track! :)")
+      #          song = self.current_song()
+      #          self.now_playing = song
+      #          self.on_now_playing_update()
+      #          self.schedule_check(song)
       
       self.conn.client.send_idle('player')
       while self.watching:
@@ -173,14 +181,70 @@ class MPDWatcher:
          track_changed = songid not in (None, last_songid)
 
          if track_changed:
+            logging.debug("Track changed!")
             song = self.current_song()
-            self.process_song(song)
+            self.now_playing = song
+            self.on_now_playing_update()
+            self.schedule_check(song)
          
          last_status = status
 
          # Continue idling, and sleep for a while.
          time.sleep(1)
          self.conn.client.send_idle('player')
+
+   def schedule_check(self, song):
+      """ wait until a percentage of the song is finished and proceed """
+
+      logging.debug("Called schedule_check")
+
+      # This doesn't normally happen, but who knows?
+      try:
+         duration = int(song['time'])
+      except:
+         # Song doesn't constitute as a song
+         logging.debug("Failed duration-check")
+         return False
+
+      # If the song is longer than 8 minutes, the first 4 minutes is enough,
+      # else, half of the song must be listened before submitted to Last.fm
+      if duration >= 480:
+         checkpoint = 240
+      else:
+         checkpoint = duration * 0.5
+      
+      logging.debug("Set checkpoint to %s seconds" % str(checkpoint))
+
+      last_songid = self.conn.client.status().get('songid', None)
+      songid = last_songid
+      if last_songid == None:
+         logging.debug("Failed last_songid not None")
+         return False
+
+      elapsed = int(float(self.conn.client.status().get('elapsed', None)))
+
+      # Song not listenable
+      if elapsed == None:
+         logging.debug("Failed elapsed not None")
+         return False
+
+      logging.debug("Entering loop")
+      # Listen to the song until we've reached the checkpoint
+      while last_songid == songid and not elapsed >= checkpoint:
+         time.sleep(1)
+         status = self.conn.client.status()
+         try:
+            elapsed = int(float(status.get('elapsed', None)))
+            songid = status.get('songid', None)
+         except:
+            return False
+
+      # songid could also be set from an outer source, so double-check
+      if elapsed >= checkpoint:
+         self.process_song(song)
+         return True
+
+      return False
 
    def process_song(self, song):
       """ If a song is worthy of being scrobbled, add it to the queue. """
@@ -213,16 +277,12 @@ class MPDWatcher:
       except:
          pass
       try:
-         payload['track_number'] = song['track']
-      except:
-         pass
-      try:
          payload['duration'] = int(song['time'])
       except:
          pass
 
       self.queue.append(payload)
-      self.on_update()
+      self.on_queue_update()
 
    def stop(self):
       """ Stop watching the MPD server """
@@ -248,10 +308,11 @@ class Scrobbler:
 
       self.network.scrobble_many(tracks)
 
-   def now_playing(self, album, artist, title):
+   def now_playing(self, album, artist, title, album_artist, duration):
       """ Update now playing status on Last.fm """
 
-      self.network.update_now_playing(album=album, artist=artist, title=title)
+      self.network.update_now_playing(album=album, artist=artist, title=title,
+            album_artist=album_artist, duration=duration)
 
 def main():
    logging.info("Connecting to MPD ...")
@@ -270,9 +331,20 @@ def main():
       raise OiseauError("Couldn't connect to Last.fm: %s" % e)
    logging.debug("Initialized.")
 
-   def watcher_process():
-      if watcher.queue != []:
-         last_played = watcher.queue[-1]
+   def scrobble_queue():
+      try:
+         if watcher.queue != []:
+            scrobbler.scrobble_many(watcher.queue)
+            logging.info("Scrobbled track(s) to Last.fm")
+         
+         # Reset queue after batch scrobbling, avoid multiple scrobbles
+         watcher.queue = []
+      except Exception as e:
+         raise OiseauError("Could not scrobble track(s): %s" % e)
+
+   def set_now_playing():
+      if watcher.now_playing != None:
+         last_played = watcher.now_playing
          
          try:
             artist = last_played['artist']
@@ -294,27 +366,14 @@ def main():
             duration = int(last_played['duration'])
          except:
             duration = None
-         try:
-            track_number = last_played['track']
-         except:
-            track_number = None
 
          scrobbler.now_playing(artist=artist, album=album, title=title,
-               album_artist=album_artist, duration=duration, track_number=track_number)
+               album_artist=album_artist, duration=duration)
          logging.info("Submitted 'now_playing' to Last.fm")
       
-      try:
-         if watcher.queue != []:
-            scrobbler.scrobble_many(watcher.queue)
-            logging.info("Scrobbled track to Last.fm")
-         
-         # Reset queue after batch scrobbling, avoid multiple scrobbles
-         watcher.queue = []
-      except Exception as e:
-         raise OiseauError("Could not scrobble track: %s" % e)
-   
    logging.info("Watching for MPD tracks.")
-   watcher.on_update.append(watcher_process)
+   watcher.on_queue_update.append(scrobble_queue)
+   watcher.on_now_playing_update.append(set_now_playing)
 
    try:
       watcher.watch()

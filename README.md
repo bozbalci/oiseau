@@ -3,20 +3,18 @@ oiseau
 
 Extremely hacky [Last.fm][lfm] scrobbler for MPD that I wrote for myself (because every other scrobbler sucked).
 
-Pros:
+Features
+--------
 
-- Makes sure to submit each track "at most" once.
-- Supports submitting the currently playing track as "Now Playing" on Last.fm
+- No duplicate scrobbles
+- Updates 'now playing' on Last.fm when it can
+- Waits for the half of the track to be listened before submitting (except if the track is longer than 8 minutes, it only requires the first 4 minutes)
 
-Cons:
+TODO
+----
 
-- Scrobbles a track immediately after the song starts. (TODO: Fix this)
-- Doesn't have arguments/configs/documents/help etc, you have to modify the source code.
-- Doesn't cache tracks for later scrobbling (TODO: Fix this)
-
-TODO:
-
-- Wait until the half of the song before scrobbling it to Last.fm
+- Introduce a configuration file
+- Take command-line arguments (?)
 - Cache tracks for later scrobbling
 
 Usage
