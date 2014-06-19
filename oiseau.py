@@ -346,7 +346,7 @@ class Oiseau:
       """ Stop the entire Oiseau procedure, disconnect from MPD. """
 
       self.watcher.stop()
-      self.client.disconnect()
+      self.conn.disconnect()
 
 def parse_args():
    # TODO: Parse the arguments passed to Oiseau and handle them accordingly
@@ -356,7 +356,7 @@ def main():
    """ The entry point of Oiseau """
 
    conn = MPDConnection(MPD_HOST, MPD_PORT, MPD_PASSWORD, MPD_UNICODE)
-   watcher = MPDWatcher(client)
+   watcher = MPDWatcher(conn)
 
    try:
       scrobbler = Scrobbler(LFM_USERNAME, LFM_PASSWORD)
