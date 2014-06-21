@@ -250,7 +250,15 @@ class MPDWatcher:
 
       # The following are not mandatory, but still nice to be known by Last.fm
       if song["album"]: payload["album"] = song["album"]
-      if song["albumartist"]: payload["album_artist"] = song["albumartist"]
+
+      # Often, MPD responds with a list instead of a single string for 'albumartist'.
+      # If it's a list, return first element, else, return the string itself.
+      if song["albumartist"]:
+         if isinstance(song["albumartist"], list) and not isinstance(song["albumartist"], basestring):
+            payload["album_artist"] = song["albumartist"][0]
+         else:
+            payload["album_artist"] = song["albumartist"]
+
       if song["time"]: payload["duration"] = int(song["time"])
 
       # Add the song to the list and call the list update event
@@ -329,7 +337,17 @@ class Oiseau:
 
       # The following are not mandatory, but still nice to be known by Last.fm
       album = last_played["album"] if last_played["album"] else None
-      album_artist = last_played["albumartist"] if last_played["albumartist"] else None
+
+      # Often, MPD responds with a list instead of a single string for 'albumartist'.
+      # If it's a list, return first element, else, return the string itself.
+      if last_played["albumartist"]:
+         if isinstance(last_played["albumartist"], list) and not isinstance(last_played["albumartist"], basestring):
+            album_artist = last_played["albumartist"][0]
+         else:
+            album_artist = last_played["albumartist"]
+      else:
+         album_artist = None
+
       duration = int(last_played["time"]) if last_played["time"] else None
 
       # Report now playing to Last.fm
