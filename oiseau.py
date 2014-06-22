@@ -660,9 +660,9 @@ if __name__ == "__main__":
       main()
    except OiseauError as e:
       sys.stderr.write("Error: %s\n" % e)
-         sys.exit(1)
+      sys.exit(1)
    except Exception as e:
       sys.stderr.write("Unexpected exception: %s\n" % e)
-         sys.exit(1)
+      sys.exit(1)
    except:
       sys.exit(0)
