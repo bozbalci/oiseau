@@ -16,7 +16,6 @@ TODO
 ----
 
 - Cache tracks for later scrobbling
-- Add logging options
 - Code cleaning
 
 Usage
