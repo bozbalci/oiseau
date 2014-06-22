@@ -43,6 +43,8 @@ The command line usage:
       -k             kill the running oiseau daemon
       -f CFGFILE     the location of the configuration file
       -i PIDFILE     the location of the pid file
+      -l LOGFILE     the location of the log file
+      -d             log everything
 
 The recommended installation is to move oiseau somewhere in `$PATH` and mark it as an executable. Create a directory in `~` named `.oiseau` and fill in a configuration file named `config`. You may now run oiseau as a daemon by simply running `oiseau` in your terminal. You may start oiseau from your `.xinitrc`.
 
