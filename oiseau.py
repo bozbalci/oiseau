@@ -27,22 +27,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# -------------------------
-# Configuration
-# -------------------------
-
-LFM_USERNAME = "Last.fm username"
-LFM_PASSWORD = "Last.fm password"
-MPD_HOST     = "localhost"
-MPD_PORT     = 6600
-MPD_PASSWORD = None
-MPD_UNICODE  = True
-DEBUG        = False
-
-# -------------------------
-# Here be dragons ...
-# -------------------------
-
 VERSION = "oiseau 0.1 - a Last.fm scrobbler for Music Player Daemon.\n\
 Copyright (c) 2014, Berk Özbalcı <berkozbalci@gmail.com>"
 
