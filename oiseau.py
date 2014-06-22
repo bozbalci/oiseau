@@ -38,6 +38,7 @@ import os
 import atexit
 import signal
 import argparse
+import logging
 import ConfigParser
 
 class Event(list):
@@ -61,8 +62,11 @@ class Daemon(object):
 
    def daemonize(self):
       """ do the UNIX double-fork magic """
+      
+      logging.debug("Daemonizing...")
 
       try:
+         logging.debug("Attempting fork #1")
          pid = os.fork()
          if pid > 0:
             # exit first parent
@@ -70,6 +74,7 @@ class Daemon(object):
       except OSError, e:
          raise OiseauError("Fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
 
+      logging.debug("Decoupling from the parent environment")
       # decouple from parent environment
       os.chdir("/")
       os.setsid()
@@ -77,12 +82,14 @@ class Daemon(object):
 
       # do second fork
       try:
+         logging.debug("Attempting fork #2")
          pid = os.fork()
          if pid > 0:
             sys.exit(0)
       except OSError, e:
          raise OiseauError("Fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
 
+      logging.debug("Setting file descriptors...")
       sys.stdout.flush()
       sys.stderr.flush()
       si = file(self.stdin, 'r')
@@ -94,10 +101,16 @@ class Daemon(object):
 
       # write pidfile
       atexit.register(self.delpid)
+      logging.debug("delpid registered to atexit")
+
+      logging.debug("Writing pidfile...")
       pid = str(os.getpid())
+      logging.debug("pid is " + pid + ", pidfile is " + self.pidfile)
       file(self.pidfile, 'w+').write("%s\n" % pid)
+      logging.debug("Wrote " + pid + " to pidfile " + self.pidfile)
 
    def delpid(self):
+      logging.debug("Deleting pidfile.")
       os.remove(self.pidfile)
 
    def start(self):
@@ -172,16 +185,25 @@ class MPDConnection:
 
    def connect(self):
       """ Connect to the MPD server """
+      
+      logging.debug("Attempting to connect to " + self.host + ":" + str(self.port))
 
       try:
          self.client.connect(self.host, self.port)
+         logging.debug("Command sent to MPD server.")
       except IOError as err:
+         logging.debug("IOError has occured")
          errno, errstr = err
+         logging.debug("Could not connect to '%s': %s" % (self.host, errstr))
          raise OiseauError("Could not connect to '%s': %s" % (self.host, errstr))
       except MPDError as e:
+         logging.debug("MPDError has occured")
          raise OiseauError("Could not connect to '%s': %s" % (self.host, e))
 
+      logging.debug("Connected to the MPD server.")
+
       if self.password:
+         logging.debug("Attempting password command")
          try:
             self.client.password(self.password)
          except CommandError as e:
@@ -190,6 +212,8 @@ class MPDConnection:
          except (MPDError, IOError) as e:
             raise OiseauError("Could not connect to '%s': "
                               "password command failed: %s" % (self.host, e))
+      
+      logging.debug("MPD connect procedure completed")
 
    def disconnect(self):
       """ Disconnect from the MPD server """
@@ -471,8 +495,20 @@ class Oiseau(Daemon):
       """ The main Oiseau procedure. Enter the loop, call events and handle them.
           Overrides Daemon.run() """
 
-      self.conn.connect()
-      self.watcher.watch()
+      try:
+         logging.debug("Starting oiseau procedure...")
+         self.conn.connect()
+         logging.debug("Connected to the MPD server")
+         logging.debug("Entering watcher loop")
+         self.watcher.watch()
+      except OiseauError as e:
+         logging.error("Error: %s\n" % e)
+         sys.exit(1)
+      except Exception as e:
+         logging.error("Unexpected exception: %s\n" % e)
+         sys.exit(1)
+      except:
+         sys.exit(0)
 
    def stop(self, stop_daemon=True):
       """ Stop the entire Oiseau procedure, disconnect from MPD. """
@@ -516,6 +552,10 @@ def parse_args():
          help='the location of the configuration file')
    parser.add_argument('-i', type=str, dest='pidfile',
          help='the location of the pid file')
+   parser.add_argument('-l', type=str, dest='logfile',
+         help='the location of the log file')
+   parser.add_argument('-d', action='store_true', dest='debug',
+         help='log everything')
 
    # Instead of setting the defaults here, we're going to provide a mechanism
    # to allow preferences among CLI args and config file args. 
@@ -564,13 +604,18 @@ def read_config(cfg):
    # Oiseau Options: Here are the logging level, log file, pid file, and TODO the
    # cache file options. All of the following options could also be set by
    # passing arguments to the program, and all of the options have default values.
-   # To provide a mechanism that makes preferences among the two, we are going to
-   # return the preferences in a tuple form, with a boolean as the second element,
-   # that indicates whether the option has been explicitly set.
    try:
       prefs['pidfile'] = config.get('oiseau', 'pidfile')
    except:
       prefs['pidfile'] = None
+   try:
+      prefs['logfile'] = config.get('oiseau', 'logfile')
+   except:
+      prefs['pidfile'] = None
+   try:
+      prefs['debug'] = config.getboolean('oiseau', 'debug')
+   except:
+      prefs['debug'] = None
 
    return prefs
 
@@ -595,12 +640,31 @@ def main():
    # Read the configuration file.
    prefs = read_config(config)
 
+   if args.logfile:
+      logfile = absolute_path(args.logfile)
+   else:
+      if os.path.isdir(absolute_path("~/.oiseau")):
+         logfile = absolute_path("~/.oiseau/log")
+      else:
+         try:
+            os.mkdir(absolute_path("~/.oiseau"))
+         except:
+            raise OiseauError("Couldn't create directory for Oiseau logs")
+         logfile = absolute_path("~/.oiseau/log")
+
+   if args.debug:
+      logging.basicConfig(filename=logfile, level=logging.DEBUG)
+   else:
+      if prefs['debug']:
+         logging.basicConfig(filename=logfile, level=logging.DEBUG)
+
    # Print the program version and copyright information
    if args.version:
       print(VERSION)
       return
 
    # Create the client/watcher objects to pass to Oiseau
+   logging.debug("Initializing MPDConnection and MPDWatcher")
    conn = MPDConnection(
          host=prefs['mpd_host'],
          port=prefs['mpd_port'],
@@ -609,6 +673,7 @@ def main():
    watcher = MPDWatcher(conn)
 
    # Try logging in to Last.fm
+   logging.debug("Initializing scrobbler")
    try:
       scrobbler = Scrobbler(prefs['lfm_username'], prefs['lfm_password'])
    except pylast.WSError as e:
@@ -618,6 +683,7 @@ def main():
          raise OiseauError("Couldn't connect to Last.fm: %s" % e)
 
       # Just a dummy scrobbler.
+      logging.debug("Initialized a dummy scrobbler")
       scrobbler = None
 
    # Choose a pidfile.
@@ -629,21 +695,26 @@ def main():
       else:
          pidfile = "/tmp/oiseau.pid"
 
+   logging.debug("Chose pidfile " + pidfile)
+
    # Make it rain!
    oiseau = Oiseau(pidfile, conn, watcher, scrobbler)
 
    # or don't :p
    if args.kill:
+      logging.debug("Stopping oiseau daemon")
       oiseau.stop()
       return
 
    # Run as a daemon
    if not args.foreground:
+      logging.debug("Starting oiseau daemon")
       oiseau.start()
 
    # Run in the foreground, setting the std{in,out,err} as they were (instead of
    # the ones given in the configuration.) Nothing is printed on the pidfile.
    if args.foreground:
+      logging.debug("Running oiseau in the foreground")
       oiseau.pidfile = None
       oiseau.stdout = sys.stdout
       oiseau.stdin = sys.stdin
