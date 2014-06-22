@@ -1,0 +1,20 @@
+# NOTE: Strings must not be contained in single/double quotes.
+# You don't need to uncomment anything, as they are all the default values.
+# To make oiseau useful, you first need to fill out the [lastfm] section.
+
+[mpd]
+# host = localhost
+# port = 6660
+# password =
+
+[lastfm]
+username =
+password =
+# password_hash is your md5 hashed Last.fm password. It will be preferred over password,
+# if it is set.
+# password_hash =
+
+[oiseau]
+# pidfile = /tmp/oiseau.pid
+
+# vim: ft=conf
