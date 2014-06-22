@@ -3,6 +3,14 @@ oiseau
 
 Extremely hacky [Last.fm][lfm] scrobbler for MPD that I wrote for myself. Still in active development.
 
+Requirements
+------------
+
+- Tested on Python 2.7.6, will not work in Python 3.x
+- Requires MPD >= 0.15, tested on MPD 0.18.11
+- [python-mpd2][py27-mpd2] >= 0.5.3
+- [pylast][pylast] >= 0.5.11
+
 Features
 --------
 
@@ -49,13 +57,32 @@ The command line usage:
 
 The recommended installation is to move oiseau somewhere in `$PATH` and mark it as an executable. Create a directory in `~` named `.oiseau` and fill in a configuration file named `config`. You may now run oiseau as a daemon by simply running `oiseau` in your terminal. You may start oiseau from your `.xinitrc`.
 
-Requirements
-------------
+License
+-------
 
-- Tested on Python 2.7.6, will not work in Python 3.x
-- Requires MPD >= 0.15, tested on MPD 0.18.11
-- [python-mpd2][py27-mpd2] >= 0.5.3
-- [pylast][pylast] >= 0.5.11
+    Copyright (c) 2014, Berk Özbalcı
+    All rights reserved.
+    
+    Redistribution and use in source and binary forms, with or without modification,
+    are permitted provided that the following conditions are met:
+    
+    * Redistributions of source code must retain the above copyright notice, this
+      list of conditions and the following disclaimer.
+    
+    * Redistributions in binary form must reproduce the above copyright notice, this
+      list of conditions and the following disclaimer in the documentation and/or
+      other materials provided with the distribution.
+    
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+    ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+    ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 [lfm]: http://www.last.fm
 [py27-mpd2]: https://github.com/Mic92/python-mpd2
