@@ -581,8 +581,8 @@ def main():
    args = parse_args()
 
    # Choose a configuration file.
-   if args.config:
-      config = absolute_path(args.config)
+   if args.cfgfile:
+      config = absolute_path(args.cfgfile)
    else:
       if file_readable(absolute_path("~/.oiseau/config")):
          config = absolute_path("~/.oiseau/config")
