@@ -6,19 +6,32 @@ Extremely hacky [Last.fm][lfm] scrobbler for MPD that I wrote for myself. Still 
 Features
 --------
 
-- No duplicate scrobbles
+- Scrobbling (obviously)
 - Updates 'now playing' on Last.fm when it can
-- Waits for the half of the track to be listened before submitting (except if the track is longer than 8 minutes, it only requires the first 4 minutes)
+- No duplicate scrobbles (almost guaranteed)
+- Waits for a portion of the song to be finished before scrobbling
 - **NEW:** Can be run as a daemon now!
 
 TODO
 ----
 
-- Introduce a configuration file
 - Cache tracks for later scrobbling
+- Add logging options
+- Code cleaning
 
 Usage
 -----
+
+oiseau requires a configuration file before using. An example configuration file has been provided with the package. The preference order for the configuration file is as follows:
+
+1. If specified in the arguments, `-f <config_file>`
+2. If it exists, `~/.oiseau/config`
+3. If it exists, `/usr/local/etc/oiseau.conf`
+4. No configuration file found, raise an error
+
+oiseau also requires a temporary pid file, which defaults to `/tmp/oiseau.pid` if not another one is supplied in the arguments or the configuration file.
+
+The command line usage:
 
     usage: oiseau [options]
     
@@ -29,27 +42,10 @@ Usage
       -v, --version  show version and exit
       -F             run oiseau in the foreground, rather than as a daemon
       -k             kill the running oiseau daemon
+      -f CFGFILE     the location of the configuration file
       -i PIDFILE     the location of the pid file
 
-For connection details, open `oiseau.py` and edit the following lines:
-
-    # -------------------------
-    # Configuration
-    # -------------------------
-    
-    LFM_USERNAME = "Your Last.fm username"
-    LFM_PASSWORD = "Your Last.fm password"
-    MPD_HOST     = "MPD hostname"
-    MPD_PORT     = MPD port
-    MPD_PASSWORD = None  | If you have a password, write it in quotation marks
-    MPD_UNICODE  = True  | Use unicode on MPD
-    DEBUG        = False | Speaks for itself
-    
-    # -------------------------
-    # Here be dragons ...
-    # -------------------------
-
-Mark the file as executable, move it into somewhere in the $PATH and you're ready.
+The recommended installation is to move oiseau somewhere in `$PATH` and mark it as an executable. Create a directory in `~` named `.oiseau` and fill in a configuration file named `config`. You may now run oiseau as a daemon by simply running `oiseau` in your terminal. You may start oiseau from your `.xinitrc`.
 
 Requirements
 ------------
