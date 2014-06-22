@@ -16,5 +16,7 @@ password =
 
 [oiseau]
 # pidfile = /tmp/oiseau.pid
+# logfile = ~/.oiseau/log
+# debug = false
 
 # vim: ft=conf
