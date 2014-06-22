@@ -390,11 +390,11 @@ class MPDWatcher:
 class Scrobbler:
    """ Submits tracks to Last.fm """
 
-   def __init__(self, username, password):
+   def __init__(self, username, password_hash):
       API_KEY    = "a76e4f3f6a9e81f45a943509437a125f"
       API_SECRET = "480a8292392dbba520848a3a955e2ec4"
 
-      password_hash = pylast.md5(password)
+      # password_hash will always be hashed with md5
       self.network = pylast.LastFMNetwork(
             api_key = API_KEY, api_secret = API_SECRET,
             username = username, password_hash = password_hash)
@@ -443,7 +443,7 @@ class Oiseau(Daemon):
          # it will be meaningless to call this function again.
          self.watcher.queue = []
       except Exception as e:
-         # TODO: Write the scrobble data to a csv file for later reviewal
+         # TODO: Write the scrobble data to a csv/json file for later reviewal
          # Do not raise OiseauError, instead, cache the scrobbles.
          pass
 
@@ -451,7 +451,7 @@ class Oiseau(Daemon):
       """ After receiving a now playing update event, report it to Last.fm """
 
       # If the now_playing track hasn't been set yet ...
-      if self.watcher.now_playing == None:
+      if self.watcher.now_playing is None:
          return
 
       last_played = self.watcher.now_playing
@@ -502,6 +502,18 @@ class Oiseau(Daemon):
       if stop_daemon:
          super(Oiseau, self).stop()
 
+def absolute_path(path):
+   """ Return the absolute path of the given path. """
+
+   path = os.path.expandvars(path)
+   path = os.path.expanduser(path)
+   path = os.path.abspath(path)
+
+   return path
+
+def file_readable(path):
+   return os.access(path, os.R_OK)
+
 def parse_args():
    """ Parse the arguments passed to Oiseau. """
 
@@ -516,27 +528,105 @@ def parse_args():
          help='run oiseau in the foreground, rather than as a daemon')
    parser.add_argument('-k', action='store_true', dest='kill',
          help='kill the running oiseau daemon')
+   parser.add_argument('-f', type=str, dest='cfgfile',
+         help='the location of the configuration file')
    parser.add_argument('-i', type=str, dest='pidfile',
          help='the location of the pid file')
 
-   parser.set_defaults(pidfile='/tmp/oiseau.pid')
+   # Instead of setting the defaults here, we're going to provide a mechanism
+   # to allow preferences among CLI args and config file args. 
+   args = parser.parse_args()
+   return args
 
-   return parser.parse_args()
+def read_config(cfg):
+   config = ConfigParser.ConfigParser()
+   prefs = {}
+
+   try:
+      config.read(cfg)
+   except Exception as e:
+      raise OiseauError("Could not read configuration file: %s" % e)
+
+   # MPD Connection Information: Default is always localhost:6600 with no password.
+   try:
+      prefs['mpd_host'] = config.get('mpd', 'host')
+   except:
+      prefs['mpd_host'] = "localhost"
+   try:
+      prefs['mpd_port'] = config.getint('mpd', 'port')
+   except:
+      prefs['mpd_port'] = 6600
+   try:
+      prefs['mpd_password'] = config.get('mpd', 'password')
+   except:
+      prefs['mpd_password'] = None
+
+   # Last.fm Connection Information: An username and a password must always be
+   # specified. The password is accepted in two formats: a password already hashed
+   # with md5, and a plaintext password. The former is the preferred one, and one
+   # cannot use the both at the same time.
+   try:
+      prefs['lfm_username'] = config.get('lastfm', 'username')
+   except:
+      raise OiseauError("Last.fm username must be specified!")
+   try:
+      prefs['lfm_password'] = config.get('lastfm', 'password_hash')
+   except:
+      try:
+         prefs['lfm_password'] = pylast.md5(config.get('lastfm', 'password'))
+      except:
+         raise OiseauError("Last.fm password must be specified!")
+
+   # Oiseau Options: Here are the logging level, log file, pid file, and TODO the
+   # cache file options. All of the following options could also be set by
+   # passing arguments to the program, and all of the options have default values.
+   # To provide a mechanism that makes preferences among the two, we are going to
+   # return the preferences in a tuple form, with a boolean as the second element,
+   # that indicates whether the option has been explicitly set.
+   try:
+      prefs['pidfile'] = config.get('oiseau', 'pidfile')
+   except:
+      prefs['pidfile'] = None
+
+   return prefs
 
 def main():
    """ The entry point of Oiseau """
 
+   # Read the command line arguments.
    args = parse_args()
 
+   # Choose a configuration file.
+   if args.config:
+      config = absolute_path(args.config)
+   else:
+      if file_readable(absolute_path("~/.oiseau/config")):
+         config = absolute_path("~/.oiseau/config")
+      else:
+         if file_readable("/usr/local/etc/oiseau.conf"):
+            config = "/usr/local/etc/oiseau.conf"
+         else:
+            raise OiseauError("No configuration file has been detected!")
+
+   # Read the configuration file.
+   prefs = read_config(config)
+
+   # Print the program version and copyright information
    if args.version:
       print(VERSION)
       return
 
-   conn = MPDConnection(MPD_HOST, MPD_PORT, MPD_PASSWORD, MPD_UNICODE)
+   # Create the client/watcher objects to pass to Oiseau
+   conn = MPDConnection(
+         prefs['mpd_host'],
+         prefs['mpd_port'],
+         prefs['mpd_password'],
+         MPD_UNICODE)
    watcher = MPDWatcher(conn)
 
+   # Try logging in to Last.fm
    try:
-      scrobbler = Scrobbler(LFM_USERNAME, LFM_PASSWORD)
+      scrobbler = Scrobbler(prefs['lfm_username'], prefs['lfm_password'])
    except pylast.WSError as e:
       # If we're going to kill the running daemon, we don't really care if we
       # can connect to Last.fm. Don't raise an exception if so
@@ -546,15 +636,14 @@ def main():
       # Just a dummy scrobbler.
       scrobbler = None
 
-   # TODO: When the configuration file feature is ready, this will be replaced by
-   # a mechanism that processes the preferences both from the configuration file
-   # and the arguments.
-   pidfile = args.pidfile
-
-   # Get the absolute path of pidfile
-   pidfile = os.path.expandvars(pidfile)
-   pidfile = os.path.expanduser(pidfile)
-   pidfile = os.path.abspath(pidfile)
+   # Choose a pidfile.
+   if args.pidfile:
+      pidfile = absolute_path(args.pidfile)
+   else:
+      if prefs['pidfile']:
+         pidfile = absolute_path(prefs['pidfile'])
+      else:
+         pidfile = "/tmp/oiseau.pid"
 
    # Make it rain!
    oiseau = Oiseau(pidfile, conn, watcher, scrobbler)
