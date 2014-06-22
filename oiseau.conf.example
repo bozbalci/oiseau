@@ -4,7 +4,7 @@
 
 [mpd]
 # host = localhost
-# port = 6660
+# port = 6600
 # password =
 
 [lastfm]
