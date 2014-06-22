@@ -27,7 +27,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-VERSION = "oiseau 0.1 - a Last.fm scrobbler for Music Player Daemon.\n\
+VERSION = "oiseau-0.1 - a Last.fm scrobbler for Music Player Daemon.\n\
 Copyright (c) 2014, Berk Özbalcı <berkozbalci@gmail.com>"
 
 from mpd import MPDClient, MPDError, CommandError
@@ -602,10 +602,10 @@ def main():
 
    # Create the client/watcher objects to pass to Oiseau
    conn = MPDConnection(
-         prefs['mpd_host'],
-         prefs['mpd_port'],
-         prefs['mpd_password'],
-         MPD_UNICODE)
+         host=prefs['mpd_host'],
+         port=prefs['mpd_port'],
+         password=prefs['mpd_password'],
+         use_unicode=True)
    watcher = MPDWatcher(conn)
 
    # Try logging in to Last.fm
