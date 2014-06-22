@@ -543,6 +543,9 @@ def main():
       if not args.kill:
          raise OiseauError("Couldn't connect to Last.fm: %s" % e)
 
+      # Just a dummy scrobbler.
+      scrobbler = None
+
    # TODO: When the configuration file feature is ready, this will be replaced by
    # a mechanism that processes the preferences both from the configuration file
    # and the arguments.
