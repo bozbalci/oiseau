@@ -656,16 +656,13 @@ def main():
          sys.exit()
 
 if __name__ == "__main__":
-   if not DEBUG:
-      try:
-         main()
-      except OiseauError as e:
-         sys.stderr.write("Error: %s\n" % e)
-         sys.exit(1)
-      except Exception as e:
-         sys.stderr.write("Unexpected exception: %s\n" % e)
-         sys.exit(1)
-      except:
-         sys.exit(0)
-   if DEBUG:
+   try:
       main()
+   except OiseauError as e:
+      sys.stderr.write("Error: %s\n" % e)
+         sys.exit(1)
+   except Exception as e:
+      sys.stderr.write("Unexpected exception: %s\n" % e)
+         sys.exit(1)
+   except:
+      sys.exit(0)
