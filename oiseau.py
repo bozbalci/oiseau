@@ -43,12 +43,18 @@ DEBUG        = False
 # Here be dragons ...
 # -------------------------
 
-API_KEY      = "a76e4f3f6a9e81f45a943509437a125f"
-API_SECRET   = "480a8292392dbba520848a3a955e2ec4"
+VERSION = "oiseau 0.1 - a Last.fm scrobbler for Music Player Daemon.\n\
+Copyright (c) 2014, Berk Özbalcı <berkozbalci@gmail.com>"
 
 from mpd import MPDClient, MPDError, CommandError
 import pylast
-import time, sys
+import time
+import sys
+import os
+import atexit
+import signal
+import argparse
+import ConfigParser
 
 class Event(list):
    """ Event subscription system (http://stackoverflow.com/a/2022629/1767963) """
@@ -60,6 +66,113 @@ class Event(list):
    def __repr__(self):
       return "Event(%s)" % list.__repr__(self)
 
+class Daemon(object):
+   """ A generic daemon class. """
+   
+   def __init__(self, pidfile, stdin="/dev/null", stdout="/dev/null", stderr="/dev/null"):
+      self.stdin = stdin
+      self.stdout = stdout
+      self.stderr = stderr
+      self.pidfile = pidfile
+
+   def daemonize(self):
+      """ do the UNIX double-fork magic """
+
+      try:
+         pid = os.fork()
+         if pid > 0:
+            # exit first parent
+            sys.exit(0)
+      except OSError, e:
+         raise OiseauError("Fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
+
+      # decouple from parent environment
+      os.chdir("/")
+      os.setsid()
+      os.umask(0)
+
+      # do second fork
+      try:
+         pid = os.fork()
+         if pid > 0:
+            sys.exit(0)
+      except OSError, e:
+         raise OiseauError("Fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
+
+      sys.stdout.flush()
+      sys.stderr.flush()
+      si = file(self.stdin, 'r')
+      so = file(self.stdout, 'a+')
+      se = file(self.stderr, 'a+', 0)
+      os.dup2(si.fileno(), sys.stdin.fileno())
+      os.dup2(so.fileno(), sys.stdout.fileno())
+      os.dup2(se.fileno(), sys.stderr.fileno())
+
+      # write pidfile
+      atexit.register(self.delpid)
+      pid = str(os.getpid())
+      file(self.pidfile, 'w+').write("%s\n" % pid)
+
+   def delpid(self):
+      os.remove(self.pidfile)
+
+   def start(self):
+      """ start the daemon """
+
+      # Check for a pidfile to see if the daemon already runs
+      try:
+         pf = file(self.pidfile, 'r')
+         pid = int(pf.read().strip())
+         pf.close()
+      except IOError:
+         pid = None
+
+      if pid:
+         raise OiseauError("pidfile %s already exists. Oiseau already running?"
+               % self.pidfile)
+      
+      self.daemonize()
+      self.run()
+
+   def stop(self):
+      """ stop the daemon """
+      
+      try:
+         pf = file(self.pidfile, 'r')
+         pid = int(pf.read().strip())
+         pf.close()
+      except IOError:
+         pid = None
+
+      if not pid:
+         raise OiseauError("pidfile %s doesn't exist. Oiseau not running?"
+               % self.pidfile)
+         return # not an error in a restart
+
+      # Try killing the daemon process
+      try:
+         while True:
+            os.kill(pid, signal.SIGTERM)
+            time.sleep(0.1)
+      except OSError, err:
+         err = str(err)
+         if err.find("No such process") > 0:
+            if os.path.exists(self.pidfile):
+               os.remove(self.pidfile)
+         else:
+            raise OiseauError(err)
+
+   def restart(self):
+      """ restart the daemon """
+
+      self.stop()
+      self.start()
+
+   def run(self):
+      """ this method will be overridden when Daemon is subclassed. """
+
+      pass
+
 class OiseauError(Exception):
    """ An error in the scrobbler """
 
@@ -70,6 +183,7 @@ class MPDConnection:
       self.host = host
       self.port = port
       self.password = password
+      self.use_unicode = use_unicode
       self.client = MPDClient(use_unicode=use_unicode)
 
    def connect(self):
@@ -104,8 +218,11 @@ class MPDConnection:
       try:
          self.client.disconnect()
       except (MPDError, IOError):
-         # Now this is serious. This should never happen.
+         # Now this is seriosu. This should never happen on normal usage.
          # The client object should not be trusted to be re-used.
+         # One example where this occurs is the daemon stopping process,
+         # where the MPDClient() isn't connected and tries to disconnect.
+         # So resurrect silently.
          self.client = MPDClient(use_unicode=self.use_unicode)
 
 class MPDWatcher:
@@ -274,6 +391,9 @@ class Scrobbler:
    """ Submits tracks to Last.fm """
 
    def __init__(self, username, password):
+      API_KEY    = "a76e4f3f6a9e81f45a943509437a125f"
+      API_SECRET = "480a8292392dbba520848a3a955e2ec4"
+
       password_hash = pylast.md5(password)
       self.network = pylast.LastFMNetwork(
             api_key = API_KEY, api_secret = API_SECRET,
@@ -290,14 +410,23 @@ class Scrobbler:
       self.network.update_now_playing(album=album, artist=artist, title=title,
             album_artist=album_artist, duration=duration)
 
-class Oiseau:
+class Oiseau(Daemon):
    """ Binds it all together: the client, the watcher, the scrobbler... """
 
-   def __init__(self, conn, watcher, scrobbler):
+   def __init__(self, pidfile, conn, watcher, scrobbler,
+         stdin="/dev/null", stdout="/dev/null", stderr="/dev/null"):
+      # Initializing the daemon
+      self.pidfile = pidfile
+      self.stdin = stdin
+      self.stdout = stdout
+      self.stderr = stderr
+
+      # MPD Connection/Watcher, Last.fm Scrobbler
       self.conn = conn
       self.watcher = watcher
       self.scrobbler = scrobbler
 
+      # Connect the events to the functions
       self.watcher.on_queue_update.append(self.scrobble_queue)
       self.watcher.on_now_playing_update.append(self.set_now_playing)
 
@@ -355,23 +484,53 @@ class Oiseau:
             album_artist=album_artist, duration=duration)
 
    def run(self):
-      """ The main Oiseau procedure. Enter the loop, call events and handle them. """
+      """ The main Oiseau procedure. Enter the loop, call events and handle them.
+          Overrides Daemon.run() """
 
       self.conn.connect()
       self.watcher.watch()
 
-   def stop(self):
+   def stop(self, stop_daemon=True):
       """ Stop the entire Oiseau procedure, disconnect from MPD. """
 
       self.watcher.stop()
       self.conn.disconnect()
 
+      # Stop the daemon, calling the parent function. Note that this function could
+      # also be called in the case where Oiseau is not being run as a daemon, so
+      # we introduced a boolean parameter.
+      if stop_daemon:
+         super(Oiseau, self).stop()
+
 def parse_args():
-   # TODO: Parse the arguments passed to Oiseau and handle them accordingly
-   pass
+   """ Parse the arguments passed to Oiseau. """
+
+   parser = argparse.ArgumentParser(
+      prog='oiseau',
+      description='Last.fm scrobbler for the Music Player Daemon',
+      usage='%(prog)s [options]')
+
+   parser.add_argument('-v', '--version', action='store_true', dest='version',
+         help='show version and exit')
+   parser.add_argument('-F', action='store_true', dest='foreground',
+         help='run oiseau in the foreground, rather than as a daemon')
+   parser.add_argument('-k', action='store_true', dest='kill',
+         help='kill the running oiseau daemon')
+   parser.add_argument('-i', type=str, dest='pidfile',
+         help='the location of the pid file')
+
+   parser.set_defaults(pidfile='/tmp/oiseau.pid')
+
+   return parser.parse_args()
 
 def main():
    """ The entry point of Oiseau """
+
+   args = parse_args()
+
+   if args.version:
+      print(VERSION)
+      return
 
    conn = MPDConnection(MPD_HOST, MPD_PORT, MPD_PASSWORD, MPD_UNICODE)
    watcher = MPDWatcher(conn)
@@ -379,16 +538,46 @@ def main():
    try:
       scrobbler = Scrobbler(LFM_USERNAME, LFM_PASSWORD)
    except pylast.WSError as e:
-      raise OiseauError("Couldn't connect to Last.fm: %s" % e)
-   
-   # Make it rain!
-   oiseau = Oiseau(conn, watcher, scrobbler)
+      # If we're going to kill the running daemon, we don't really care if we
+      # can connect to Last.fm. Don't raise an exception if so
+      if not args.kill:
+         raise OiseauError("Couldn't connect to Last.fm: %s" % e)
 
-   try:
-      oiseau.run()
-   except (KeyboardInterrupt, EOFError):
+   # TODO: When the configuration file feature is ready, this will be replaced by
+   # a mechanism that processes the preferences both from the configuration file
+   # and the arguments.
+   pidfile = args.pidfile
+
+   # Get the absolute path of pidfile
+   pidfile = os.path.expandvars(pidfile)
+   pidfile = os.path.expanduser(pidfile)
+   pidfile = os.path.abspath(pidfile)
+
+   # Make it rain!
+   oiseau = Oiseau(pidfile, conn, watcher, scrobbler)
+
+   # or don't :p
+   if args.kill:
       oiseau.stop()
-      sys.exit(0)
+      return
+
+   # Run as a daemon
+   if not args.foreground:
+      oiseau.start()
+
+   # Run in the foreground, setting the std{in,out,err} as they were (instead of
+   # the ones given in the configuration.) Nothing is printed on the pidfile.
+   if args.foreground:
+      oiseau.pidfile = None
+      oiseau.stdout = sys.stdout
+      oiseau.stdin = sys.stdin
+      oiseau.stderr = sys.stderr
+
+      try:
+         oiseau.run()
+      except (KeyboardInterrupt, EOFError):
+         oiseau.stop(stop_daemon=False)
+         sys.exit()
 
 if __name__ == "__main__":
    if not DEBUG:
