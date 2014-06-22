@@ -10,11 +10,14 @@
 [lastfm]
 username =
 password =
-# password_hash is your md5 hashed Last.fm password. It will be preferred over password,
+# password_hash: your md5 hashed Last.fm password. It will be preferred over password,
 # if it is set.
 # password_hash =
 
 [oiseau]
+# scrobble_after: scrobble after N tracks, where N is an integer. N=0 scrobbles after
+# each track, and is the default value.
+# scrobble_after = 0
 # pidfile = /tmp/oiseau.pid
 # logfile = ~/.oiseau/log
 # debug = false

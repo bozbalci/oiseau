@@ -18,8 +18,9 @@ Features
 - Updates 'now playing' on Last.fm when it can
 - No duplicate scrobbles (almost guaranteed)
 - Waits for a portion of the song to be finished before scrobbling
-- **NEW:** Configuration file!
+- Configuration file
 - **NEW:** Can be run as a daemon now!
+- **NEW:** Scrobble after N tracks
 
 TODO
 ----

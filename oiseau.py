@@ -421,13 +421,16 @@ class Scrobbler:
 class Oiseau(Daemon):
    """ Binds it all together: the client, the watcher, the scrobbler... """
 
-   def __init__(self, pidfile, conn, watcher, scrobbler,
+   def __init__(self, pidfile, conn, watcher, scrobbler, prefs,
          stdin="/dev/null", stdout="/dev/null", stderr="/dev/null"):
       # Initializing the daemon
       self.pidfile = pidfile
       self.stdin = stdin
       self.stdout = stdout
       self.stderr = stderr
+
+      # Load the preferences into the Oiseau object
+      self.prefs = prefs
 
       # MPD Connection/Watcher, Last.fm Scrobbler
       self.conn = conn
@@ -444,12 +447,16 @@ class Oiseau(Daemon):
       try:
          # (If there is at least one track to scrobble)
          if self.watcher.queue != []:
-            self.scrobbler.scrobble_many(self.watcher.queue)
-         
-         # Reset queue after batch scrobbling, avoid multiple scrobbles.
-         # Do not invoke self.watcher.on_queue_update(), as the queue is empty,
-         # it will be meaningless to call this function again.
-         self.watcher.queue = []
+            # Scrobble after N tracks: if it's in the settings, 
+            if not self.prefs['scrobble_after']:
+               self.scrobbler.scrobble_many(self.watcher.queue)
+               self.watcher.queue = []
+            else:
+               if len(self.watcher.queue) >= self.prefs['scrobble_after']:
+                  self.scrobbler.scrobble_many(self.watcher.queue)
+                  self.watcher.queue = []
+               else:
+                  return
       except Exception as e:
          # TODO: Write the scrobble data to a csv/json file for later reviewal
          # Do not raise OiseauError, instead, cache the scrobbles.
@@ -605,6 +612,10 @@ def read_config(cfg):
    # cache file options. All of the following options could also be set by
    # passing arguments to the program, and all of the options have default values.
    try:
+      prefs['scrobble_after'] = config.getint('oiseau', 'scrobble_after')
+   except:
+      prefs['scrobble_after'] = 0
+   try:
       prefs['pidfile'] = config.get('oiseau', 'pidfile')
    except:
       prefs['pidfile'] = None
@@ -698,7 +709,7 @@ def main():
    logging.debug("Chose pidfile " + pidfile)
 
    # Make it rain!
-   oiseau = Oiseau(pidfile, conn, watcher, scrobbler)
+   oiseau = Oiseau(pidfile, conn, watcher, scrobbler, prefs)
 
    # or don't :p
    if args.kill:
