@@ -26,7 +26,36 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import oiseau, sys
+from setuptools import setup
+from oiseau import version
 
-if __name__ == '__main__':
-   oiseau.main(sys.argv[1:])
+setup(
+   name='oiseau',
+   version=version.version,
+   author='Berk Özbalcı',
+   author_email='berkozbalci@gmail.com',
+   url='https://github.com/berkoz/oiseau',
+   description='A Last.fm scrobbler for Music Player Daemon.',
+   long_description=open('README.rst').read(),
+   license='BSD 2-clause license',
+   packages=['oiseau',],
+   entry_points={
+      'console_scripts': [
+         'oiseau = oiseau:main',
+      ]
+   },
+   install_requires=[
+      'python-mpd2>=0.5.3',
+      'pylast>=0.5.11'
+   ],
+   classifiers=[
+      'Topic :: Multimedia :: Sound/Audio :: Player',
+      'Topic :: Internet',
+      'Environment :: Console',
+      'Development Status :: Alpha',
+      'Intended Audience :: End Users/Desktop',
+      'License :: OSI Approved :: BSD License',
+      'Operating System :: Unix',
+      'Programming Language :: Python'
+   ]
+)

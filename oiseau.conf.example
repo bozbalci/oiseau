@@ -1,25 +1,54 @@
+# Oiseau configuration file example
 # NOTE: Strings must not be contained in single/double quotes.
-# You don't need to uncomment anything, as they are all the default values.
-# To make oiseau useful, you first need to fill out the [lastfm] section.
 
 [mpd]
-# host = localhost
-# port = 6600
-# password =
+# host: the MPD server hostname (default: localhost)
+host = localhost
+
+# port: the MPD server port (default: 6600)
+port = 6600
+
+# password: the MPD server password (default: None)
+# password = hackme
 
 [lastfm]
-username =
-password =
-# password_hash: your md5 hashed Last.fm password. It will be preferred over password,
-# if it is set.
-# password_hash =
+# username: Last.fm username (default: None)
+username = generic_music_enthusiast
+
+# password_hash: Last.fm password hashed in MD5.
+password_hash = 1d13449f97b4b736a0f657e5c2526dc5
+
+# password: Last.fm password, plain.
+# password = __hackme__
+
+# NOTE: If both password and password_hash are specified,
+# password_hash will be preferred over password.
 
 [oiseau]
-# scrobble_after: scrobble after N tracks, where N is an integer. N=0 scrobbles after
-# each track, and is the default value.
-# scrobble_after = 0
-# pidfile = /tmp/oiseau.pid
-# logfile = ~/.oiseau/log
-# debug = false
+# now_playing: Enables the "Now Playing" feature of Last.fm (default: true)
+now_playing = true
+
+# scrobble_after: Submit tracks after the queue reaches N tracks. (default: 0)
+# NOTE: set 0 or 1 to disable this feature
+scrobble_after = 0
+
+# scrobble_point: Wait for this percentage of a song before queueing. (default: 0.5)
+# NOTE: This value must be a float F satisfiying (1.0 >= F >= 0.5).
+scrobble_point = 0.5
+
+# cache: Location for cache file, where unsubmitted tracks get saved. (default: None)
+# NOTE: Comment this line to disable this feature. If the file is nonexistent, it will
+# be created the first time caching is required.
+cache = ~/.oiseau/cache
+
+# logfile: Location of the log file, where Oiseau logs will be saved. (default: None)
+logfile = ~/.oiseau/log
+
+# pidfile: Location of the pid file to hold the pid of the daemon. (default: ~/oiseau/pid)
+pidfile = ~/.oiseau/pid
+
+# loglevel: Logging level. (default: warning)
+# NOTE: The available loglevel values are: debug, info, warning, error, critical.
+loglevel = warning
 
 # vim: ft=conf
