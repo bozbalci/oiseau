@@ -34,7 +34,7 @@ setup(
    version=version.version,
    author='Berk Özbalcı',
    author_email='berkozbalci@gmail.com',
-   url='https://github.com/berkoz/oiseau',
+   url='https://github.com/bozbalci/oiseau',
    description='A Last.fm scrobbler for Music Player Daemon.',
    long_description=open('README.rst').read(),
    license='BSD 2-clause license',
