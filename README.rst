@@ -37,7 +37,7 @@ Getting the latest source code
 
 If you would like to use the latest source code, you can grab a copy of the development version from Git by running the command::
 
-    $ git clone git://github.com/berkoz/oiseau.git
+    $ git clone git://github.com/bozbalci/oiseau.git
 
 Installing from source
 ----------------------
