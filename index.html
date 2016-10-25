@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>L&#39;oiseau by bozbalci</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/github-light.css">
+    <meta name="viewport" content="width=device-width">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>L&#39;oiseau</h1>
+        <p>  A Last.fm scrobbler for Music Player Daemon, written in Python.</p>
+
+        <p class="view"><a href="https://github.com/bozbalci/oiseau">View the Project on GitHub <small>bozbalci/oiseau</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/bozbalci/oiseau/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/bozbalci/oiseau/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/bozbalci/oiseau">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <p>A <a href="http://www.last.fm/">Last.fm</a> scrobbler for <a href="http://www.musicpd.org/">Music Player Daemon</a>, written in Python.</p>
+
+<p>Quoting <a href="http://cmende.github.io/scmpc/">scmpc</a>:</p>
+
+<blockquote>
+<p>”Another one?”, I hear you cry? Yes, I know about mpdscribble, but when I started this project it didn’t do entirely what I wanted it to. It didn’t run as a daemon, for example, and it didn’t work if you enable crossfading in MPD. I didn’t add the support for these in mpdscribble, partly because GNU coding style scares me, and I got slightly lost in the source code, but also because I created this as a way of teaching myself C programming.</p>
+</blockquote>
+
+<p>I wrote oiseau because scmpc submitted multiple instances of a song to Last.fm. The "keeping unsubmitted songs in a queue saved to a file" feature didn't really work in scmpc. Originally, I wanted to write oiseau in C, but I didn't want to use glib, and I realized that it would make the experience extremely difficult (seeing as there isn't too much examples of programs which use libmpdclient and not glib)</p>
+
+<h2>
+<a id="features" class="anchor" href="#features" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Features</h2>
+
+<ul>
+<li>Scrobbling (obviously)</li>
+<li>Updates "Now Playing" on Last.fm when it can</li>
+<li>No duplicate scrobbles (almost guaranteed)</li>
+<li>Waits for a portion of the song to be finished before scrobbling</li>
+<li>Can set "scrobble after N tracks"</li>
+<li>Can cache tracks for later scrobbling</li>
+<li>Configuration file</li>
+<li>Run as a daemon</li>
+</ul>
+
+<h2>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installation</h2>
+
+<p>Installation is relatively easy. Get the source from any of the links below, and run <code>python setup.py install</code> with the sufficent privileges. Then create a configuration file and you are ready to use oiseau.</p>
+
+<p>For further information, see <strong>README.rst</strong>.</p>
+
+<h2>
+<a id="source" class="anchor" href="#source" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Source</h2>
+
+<ul>
+<li>The latest source tarball is available here: <a href="https://github.com/bozbalci/oiseau/archive/oiseau-v0.1.0.tar.gz">/oiseau-0.1.0.tar.gz</a>
+</li>
+<li>Git repository: <a href="https://github.com/bozbalci/oiseau/">GitHub</a>
+</li>
+</ul>
+
+<h2>
+<a id="development" class="anchor" href="#development" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Development</h2>
+
+<p>If you'd like to get involved, if you have found any bugs, or if you have any feature requests, please open a <a href="https://github.com/bozbalci/oiseau/issues">new issue</a> in GitHub.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/bozbalci">bozbalci</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
